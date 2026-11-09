@@ -21,6 +21,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvUrl: TextView
     private lateinit var btnToggle: Button
     private lateinit var cbAutoStart: CheckBox
+    private lateinit var btnSettings: Button
 
     // 乐观 UI 状态：start/stop 时立即更新，onResume 时从服务同步
     private var streaming = false
@@ -44,6 +45,11 @@ class MainActivity : AppCompatActivity() {
         cbAutoStart.isChecked = ConfigStore.isAutoStart(this)
         cbAutoStart.setOnCheckedChangeListener { _, checked ->
             ConfigStore.setAutoStart(this, checked)
+        }
+
+        btnSettings = findViewById(R.id.btnSettings)
+        btnSettings.setOnClickListener {
+            startActivity(Intent(this, ConfigActivity::class.java))
         }
 
         btnToggle.setOnClickListener {
@@ -89,8 +95,11 @@ class MainActivity : AppCompatActivity() {
     private fun updateUi() {
         if (streaming) {
             val ip = NetworkUtil.getLocalIpv4Address() ?: "0.0.0.0"
+            val port = ConfigStore.rtspPort(this)
+            val u = ConfigStore.username(this)
+            val p = ConfigStore.password(this)
             tvStatus.text = "推流中"
-            tvUrl.text = "rtsp://$ip:8554/live"
+            tvUrl.text = "rtsp://$u:$p@$ip:$port/live"
             btnToggle.text = "停止"
         } else {
             tvStatus.text = "已停止"

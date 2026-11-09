@@ -35,6 +35,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ConfigActivity"
+            android:exported="false"
+            android:label="设置" />
+
         <service
             android:name=".stream.StreamService"
             android:exported="false"
