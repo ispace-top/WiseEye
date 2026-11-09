@@ -89,6 +89,11 @@ class RtspSession(
         }
         val cseq = headers["cseq"] ?: "0"
 
+        if (!server.isAuthorized(method, uri, headers["authorization"])) {
+            respond401(cseq)
+            return
+        }
+
         when (method.uppercase()) {
             "OPTIONS" -> respond("RTSP/1.0 200 OK", cseq, extra = "Public: OPTIONS, DESCRIBE, SETUP, TEARDOWN, PLAY, GET_PARAMETER\r\n")
             "DESCRIBE" -> respondDescribe(cseq)
@@ -97,6 +102,14 @@ class RtspSession(
             "TEARDOWN" -> respondTeardown(cseq)
             "GET_PARAMETER" -> respond("RTSP/1.0 200 OK", cseq)
             else -> respond("RTSP/1.0 405 Method Not Allowed", cseq)
+        }
+    }
+
+    private fun respond401(cseq: String) {
+        val resp = "RTSP/1.0 401 Unauthorized\r\nCSeq: $cseq\r\nWWW-Authenticate: ${server.authChallenge()}\r\n\r\n"
+        synchronized(output) {
+            output.write(resp.toByteArray())
+            output.flush()
         }
     }
 

@@ -11,7 +11,14 @@ import java.util.concurrent.atomic.AtomicInteger
  * 自研轻量 RTSP 服务端（TCP 监听 + RTP over TCP interleaved，视频/音频双轨）。
  * 实现 [VideoFrameSink] 与 [AudioFrameSink]，接收编码器输出并分发到所有 PLAY 中的会话。
  */
-class RtspServer(private val port: Int) : VideoFrameSink, AudioFrameSink {
+class RtspServer(
+    private val port: Int,
+    private val username: String = "admin",
+    private val password: String = "admin123"
+) : VideoFrameSink, AudioFrameSink {
+
+    private val realm = "IPCam"
+    private val nonce = DigestAuth.generateNonce()
 
     private var serverSocket: ServerSocket? = null
     private var acceptThread: Thread? = null
@@ -73,6 +80,20 @@ class RtspServer(private val port: Int) : VideoFrameSink, AudioFrameSink {
     }
 
     fun buildSdp(): String = SdpBuilder.build(sps, pps, aacConfig, sampleRate, channelCount)
+
+    fun authChallenge(): String = "Digest realm=\"$realm\", nonce=\"$nonce\""
+
+    fun isAuthorized(method: String, uri: String, authHeader: String?): Boolean {
+        if (authHeader == null || !authHeader.startsWith("Digest", ignoreCase = true)) return false
+        val u = extract(authHeader, "username") ?: return false
+        val n = extract(authHeader, "nonce") ?: return false
+        val r = extract(authHeader, "response") ?: return false
+        if (u != username || n != nonce) return false
+        return DigestAuth.verify(u, realm, password, method, uri, n, r)
+    }
+
+    private fun extract(header: String, key: String): String? =
+        Regex("$key=\"([^\"]*)\"").find(header)?.groupValues?.get(1)
 
     override fun onSpsPps(sps: ByteArray, pps: ByteArray) {
         this.sps = sps
