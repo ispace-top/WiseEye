@@ -19,8 +19,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnToggle: Button
 
     private val permissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) startStreaming() else tvStatus.text = "需要相机权限"
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+            val cam = grants[Manifest.permission.CAMERA] == true
+            val mic = grants[Manifest.permission.RECORD_AUDIO] == true
+            if (cam && mic) startStreaming() else tvStatus.text = "需要相机和麦克风权限"
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,13 +48,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestPermissionAndStart() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            startStreaming()
-        } else {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
+        val need = mutableListOf<String>()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            need.add(Manifest.permission.CAMERA)
         }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            need.add(Manifest.permission.RECORD_AUDIO)
+        }
+        if (need.isEmpty()) startStreaming() else permissionLauncher.launch(need.toTypedArray())
     }
 
     private fun startStreaming() {

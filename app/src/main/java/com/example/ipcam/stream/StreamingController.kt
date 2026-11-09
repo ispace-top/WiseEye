@@ -10,6 +10,8 @@ import com.example.ipcam.rtsp.RtspServer
 class StreamingController(private val context: Context) {
 
     private var encoder: VideoEncoder? = null
+    private var audioEncoder: AudioEncoder? = null
+    private var audioRecorder: AudioRecorder? = null
     private var rtspServer: RtspServer? = null
     private var cameraManager: CameraManager? = null
 
@@ -37,6 +39,13 @@ class StreamingController(private val context: Context) {
             val surface = enc.start(width, height, fps, bitrate, server)
             encoder = enc
 
+            val audioEnc = AudioEncoder()
+            audioEnc.start(16000, 1, 64_000, server)
+            audioEncoder = audioEnc
+            val recorder = AudioRecorder()
+            recorder.start(audioEnc)
+            audioRecorder = recorder
+
             val cam = CameraManager(context)
             cam.bind(surface, lifecycleOwner)
             cameraManager = cam
@@ -51,9 +60,13 @@ class StreamingController(private val context: Context) {
     fun stop() {
         isStreaming = false
         cameraManager?.unbind()
+        audioRecorder?.stop()
+        audioEncoder?.stop()
         encoder?.stop()
         rtspServer?.stop()
         cameraManager = null
+        audioRecorder = null
+        audioEncoder = null
         encoder = null
         rtspServer = null
     }

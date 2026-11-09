@@ -30,6 +30,17 @@ class RtpPacketizer {
         return packets
     }
 
+    /** 将一个 AAC 帧打包为单个 RTP 包（RFC 3640，2 字节 AU-header） */
+    fun packetizeAac(aacFrame: ByteArray, ptsUs: Long, sampleRate: Int, payloadType: Int = 97): List<ByteArray> {
+        val timestamp = ptsUs * sampleRate / 1_000_000 // 采样率时钟
+        val auHeader = (aacFrame.size shl 3) and 0xFFFF // 13 位 AU 大小 + 3 位索引(0)
+        val payload = ByteArray(2 + aacFrame.size)
+        payload[0] = ((auHeader shr 8) and 0xFF).toByte()
+        payload[1] = (auHeader and 0xFF).toByte()
+        System.arraycopy(aacFrame, 0, payload, 2, aacFrame.size)
+        return listOf(concat(buildHeader(payloadType, true, timestamp), payload))
+    }
+
     private fun fragmentFuA(nal: ByteArray, pt: Int, isLastNal: Boolean, timestamp: Long): List<ByteArray> {
         val out = mutableListOf<ByteArray>()
         val nalHeader = nal[0].toInt() and 0xFF

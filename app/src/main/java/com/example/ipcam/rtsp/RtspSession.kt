@@ -6,7 +6,7 @@ import java.io.IOException
 import java.net.Socket
 
 /**
- * 单个 RTSP 客户端会话，负责解析请求、响应，并在 PLAY 后通过 TCP interleaved 发送 RTP。
+ * 单个 RTSP 客户端会话：解析请求、响应，并在 PLAY 后通过 TCP interleaved 发送 RTP（视频/音频双轨）。
  */
 class RtspSession(
     private val socket: Socket,
@@ -23,8 +23,11 @@ class RtspSession(
     @Volatile
     private var closed = false
 
+    // 视频轨（track1）默认 interleaved 0-1，音频轨（track2）默认 2-3
     private var videoRtpChannel = 0
     private var videoRtcpChannel = 1
+    private var audioRtpChannel = 2
+    private var audioRtcpChannel = 3
 
     val isPlaying: Boolean get() = playing
 
@@ -47,7 +50,7 @@ class RtspSession(
         val sb = StringBuilder()
         while (true) {
             val b = input.read()
-            if (b == -1) return null // EOF
+            if (b == -1) return null
             if (b == '\n'.code) {
                 val line = sb.toString().trimEnd('\r')
                 sb.clear()
@@ -57,7 +60,6 @@ class RtspSession(
                 sb.append(b.toChar())
             }
         }
-        // 处理请求体（本场景客户端通常无 body）
         val contentLength = lines.firstOrNull { it.startsWith("Content-Length", ignoreCase = true) }
             ?.substringAfter(':')?.trim()?.toIntOrNull() ?: 0
         if (contentLength > 0) {
@@ -77,6 +79,7 @@ class RtspSession(
         val parts = lines[0].split(' ')
         if (parts.size < 3) return
         val method = parts[0]
+        val uri = parts[1]
         val headers = mutableMapOf<String, String>()
         for (i in 1 until lines.size) {
             val line = lines[i]
@@ -89,7 +92,7 @@ class RtspSession(
         when (method.uppercase()) {
             "OPTIONS" -> respond("RTSP/1.0 200 OK", cseq, extra = "Public: OPTIONS, DESCRIBE, SETUP, TEARDOWN, PLAY, GET_PARAMETER\r\n")
             "DESCRIBE" -> respondDescribe(cseq)
-            "SETUP" -> respondSetup(cseq, headers)
+            "SETUP" -> respondSetup(cseq, uri, headers)
             "PLAY" -> respondPlay(cseq)
             "TEARDOWN" -> respondTeardown(cseq)
             "GET_PARAMETER" -> respond("RTSP/1.0 200 OK", cseq)
@@ -111,17 +114,29 @@ class RtspSession(
         }
     }
 
-    private fun respondSetup(cseq: String, headers: Map<String, String>) {
+    private fun respondSetup(cseq: String, uri: String, headers: Map<String, String>) {
         val transport = headers["transport"] ?: ""
+        val isAudio = uri.contains("track2", ignoreCase = true)
+        var rtpChannel = if (isAudio) audioRtpChannel else videoRtpChannel
+        var rtcpChannel = if (isAudio) audioRtcpChannel else videoRtcpChannel
         if (transport.contains("TCP", ignoreCase = true)) {
             val m = Regex("interleaved=(\\d+)-(\\d+)").find(transport)
             if (m != null) {
-                videoRtpChannel = m.groupValues[1].toInt()
-                videoRtcpChannel = m.groupValues[2].toInt()
+                rtpChannel = m.groupValues[1].toInt()
+                rtcpChannel = m.groupValues[2].toInt()
             }
         }
-        val transportResp = "RTP/AVP/TCP;unicast;interleaved=$videoRtpChannel-$videoRtcpChannel"
-        respond("RTSP/1.0 200 OK", cseq, extra = "Transport: $transportResp\r\nSession: $sessionId\r\n")
+        if (isAudio) {
+            audioRtpChannel = rtpChannel
+            audioRtcpChannel = rtcpChannel
+        } else {
+            videoRtpChannel = rtpChannel
+            videoRtcpChannel = rtcpChannel
+        }
+        respond(
+            "RTSP/1.0 200 OK", cseq,
+            extra = "Transport: RTP/AVP/TCP;unicast;interleaved=$rtpChannel-$rtcpChannel\r\nSession: $sessionId\r\n"
+        )
     }
 
     private fun respondPlay(cseq: String) {
@@ -142,13 +157,16 @@ class RtspSession(
         }
     }
 
-    /** 发送一个 RTP 包（TCP interleaved 帧：$ + channel + len + payload） */
-    fun sendRtp(packet: ByteArray) {
+    fun sendVideoRtp(packet: ByteArray) = sendRtpOnChannel(packet, videoRtpChannel)
+
+    fun sendAudioRtp(packet: ByteArray) = sendRtpOnChannel(packet, audioRtpChannel)
+
+    private fun sendRtpOnChannel(packet: ByteArray, channel: Int) {
         if (!playing || closed) return
         try {
             val header = byteArrayOf(
                 0x24, // '$'
-                videoRtpChannel.toByte(),
+                channel.toByte(),
                 ((packet.size shr 8) and 0xFF).toByte(),
                 (packet.size and 0xFF).toByte()
             )
