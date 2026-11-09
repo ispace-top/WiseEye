@@ -18,6 +18,7 @@ object ConfigStore {
     private const val KEY_USERNAME = "username"
     private const val KEY_PASSWORD = "password"
     private const val KEY_RTMP_URL = "rtmp_url"
+    private const val KEY_ROTATION = "rotation"
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -45,4 +46,8 @@ object ConfigStore {
 
     fun rtmpUrl(context: Context) = prefs(context).getString(KEY_RTMP_URL, "") ?: ""
     fun setRtmpUrl(context: Context, v: String) = prefs(context).edit().putString(KEY_RTMP_URL, v).apply()
+
+    /** 输出方向旋转角度：0=横屏，90=竖屏 */
+    fun rotation(context: Context) = prefs(context).getInt(KEY_ROTATION, 0)
+    fun setRotation(context: Context, v: Int) = prefs(context).edit().putInt(KEY_ROTATION, v).apply()
 }

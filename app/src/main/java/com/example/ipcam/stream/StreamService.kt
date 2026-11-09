@@ -40,6 +40,8 @@ class StreamService : LifecycleService() {
         super.onStartCommand(intent, flags, startId)
         when (intent?.action) {
             ACTION_STOP -> stopSelf()
+            ACTION_SWITCH_CAMERA -> controller.switchCamera()
+            ACTION_RESTART -> restartStreaming()
             else -> startStreaming() // ACTION_START 或系统重启（intent == null）
         }
         return START_STICKY
@@ -52,6 +54,12 @@ class StreamService : LifecycleService() {
         handler.removeCallbacks(watchdog)
         handler.postDelayed(watchdog, WATCHDOG_INTERVAL)
         Log.i(TAG, "streaming started")
+    }
+
+    private fun restartStreaming() {
+        controller.stop()
+        startStreaming()
+        Log.i(TAG, "streaming restarted")
     }
 
     private val watchdog = object : Runnable {
@@ -123,6 +131,8 @@ class StreamService : LifecycleService() {
 
         const val ACTION_START = "com.example.ipcam.action.START"
         const val ACTION_STOP = "com.example.ipcam.action.STOP"
+        const val ACTION_SWITCH_CAMERA = "com.example.ipcam.action.SWITCH_CAMERA"
+        const val ACTION_RESTART = "com.example.ipcam.action.RESTART"
 
         @Volatile
         var isRunning = false

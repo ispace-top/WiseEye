@@ -1,6 +1,7 @@
 package com.example.ipcam.stream
 
 import android.content.Context
+import android.view.Surface
 import androidx.lifecycle.LifecycleOwner
 import com.example.ipcam.data.ConfigStore
 import com.example.ipcam.onvif.OnvifServer
@@ -38,6 +39,10 @@ class StreamingController(private val context: Context) {
         val bitrate = ConfigStore.bitrate(context)
         val username = ConfigStore.username(context)
         val password = ConfigStore.password(context)
+        val rotation = ConfigStore.rotation(context)
+        // 竖屏时交换宽高
+        val encW = if (rotation == 90) height else width
+        val encH = if (rotation == 90) width else height
         try {
             val server = RtspServer(port, username, password)
             server.start()
@@ -60,7 +65,7 @@ class StreamingController(private val context: Context) {
             }
 
             val enc = VideoEncoder()
-            val surface = enc.start(width, height, fps, bitrate, mux)
+            val surface = enc.start(encW, encH, fps, bitrate, mux)
             encoder = enc
 
             val audioEnc = AudioEncoder()
@@ -70,7 +75,7 @@ class StreamingController(private val context: Context) {
             recorder.start(audioEnc)
             audioRecorder = recorder
 
-            val onvif = OnvifServer(rtspPort = port, width = width, height = height, fps = fps, username = username, password = password)
+            val onvif = OnvifServer(rtspPort = port, width = encW, height = encH, fps = fps, username = username, password = password)
             onvif.start()
             onvifServer = onvif
             val ws = WsDiscoveryServer { "http://${NetworkUtil.getLocalIpv4Address() ?: "0.0.0.0"}:8000/onvif/device_service" }
@@ -79,7 +84,7 @@ class StreamingController(private val context: Context) {
 
             val cam = CameraManager(context)
             cam.onZoomReady = { zc -> onvif.setZoomController(zc) }
-            cam.bind(surface, lifecycleOwner)
+            cam.bind(surface, lifecycleOwner, rotation = if (rotation == 90) Surface.ROTATION_90 else Surface.ROTATION_0)
             cameraManager = cam
 
             isStreaming = true
@@ -119,4 +124,8 @@ class StreamingController(private val context: Context) {
     fun clientCount(): Int = rtspServer?.clientCount() ?: 0
 
     fun lastVideoFrameTime(): Long = encoder?.lastFrameTime ?: 0L
+
+    fun switchCamera() {
+        cameraManager?.switchCamera()
+    }
 }

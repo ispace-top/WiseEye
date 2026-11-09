@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,7 +26,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvStatus: TextView
     private lateinit var tvUrl: TextView
     private lateinit var btnToggle: MaterialButton
-    private lateinit var btnSettings: MaterialButton
+    private lateinit var btnSettings: ImageButton
+    private lateinit var btnAbout: ImageButton
+    private lateinit var btnSwitchCamera: ImageButton
+    private lateinit var btnRotate: ImageButton
 
     private var preview: LocalPreview? = null
     private var surfaceReady = false
@@ -61,6 +65,9 @@ class MainActivity : AppCompatActivity() {
         tvUrl = findViewById(R.id.tvUrl)
         btnToggle = findViewById(R.id.btnToggle)
         btnSettings = findViewById(R.id.btnSettings)
+        btnAbout = findViewById(R.id.btnAbout)
+        btnSwitchCamera = findViewById(R.id.btnSwitchCamera)
+        btnRotate = findViewById(R.id.btnRotate)
 
         svPreview.holder.addCallback(surfaceCallback)
 
@@ -68,7 +75,27 @@ class MainActivity : AppCompatActivity() {
             if (streaming) stopStreaming() else requestPermissionAndStart()
         }
         btnSettings.setOnClickListener { startActivity(Intent(this, ConfigActivity::class.java)) }
+        btnAbout.setOnClickListener { startActivity(Intent(this, AboutActivity::class.java)) }
         tvUrl.setOnClickListener { copyUrl() }
+
+        btnSwitchCamera.setOnClickListener {
+            if (streaming) {
+                startService(Intent(this, StreamService::class.java).apply { action = StreamService.ACTION_SWITCH_CAMERA })
+                Toast.makeText(this, "已切换摄像头", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        btnRotate.setOnClickListener {
+            val cur = ConfigStore.rotation(this)
+            val newRot = if (cur == 90) 0 else 90
+            ConfigStore.setRotation(this, newRot)
+            if (streaming) {
+                startService(Intent(this, StreamService::class.java).apply { action = StreamService.ACTION_RESTART })
+                stopPreview()
+                svPreview.postDelayed({ maybeStartPreview() }, 2500)
+            }
+            Toast.makeText(this, if (newRot == 90) "已切换为竖屏输出" else "已切换为横屏输出", Toast.LENGTH_SHORT).show()
+        }
 
         updateUi()
     }
