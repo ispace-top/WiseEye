@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "IPCam"
+rootProject.name = "WiseEye"
 include(":app")
