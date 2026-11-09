@@ -1,0 +1,62 @@
+package com.example.ipcam.stream
+
+import android.content.Context
+import androidx.lifecycle.LifecycleOwner
+import com.example.ipcam.rtsp.RtspServer
+
+/**
+ * 流控制中心：编排「相机采集 → 硬编 → RTSP 服务端」全链路。
+ */
+class StreamingController(private val context: Context) {
+
+    private var encoder: VideoEncoder? = null
+    private var rtspServer: RtspServer? = null
+    private var cameraManager: CameraManager? = null
+
+    @Volatile
+    var isStreaming = false
+        private set
+
+    var onError: ((String) -> Unit)? = null
+
+    fun start(
+        lifecycleOwner: LifecycleOwner,
+        port: Int = 8554,
+        width: Int = 1280,
+        height: Int = 720,
+        fps: Int = 25,
+        bitrate: Int = 2_000_000
+    ) {
+        if (isStreaming) return
+        try {
+            val server = RtspServer(port)
+            server.start()
+            rtspServer = server // 立即赋值，异常时 stop() 能正确关闭
+
+            val enc = VideoEncoder()
+            val surface = enc.start(width, height, fps, bitrate, server)
+            encoder = enc
+
+            val cam = CameraManager(context)
+            cam.bind(surface, lifecycleOwner)
+            cameraManager = cam
+
+            isStreaming = true
+        } catch (e: Exception) {
+            onError?.invoke(e.message ?: "start failed")
+            stop()
+        }
+    }
+
+    fun stop() {
+        isStreaming = false
+        cameraManager?.unbind()
+        encoder?.stop()
+        rtspServer?.stop()
+        cameraManager = null
+        encoder = null
+        rtspServer = null
+    }
+
+    fun getRtspUrl(host: String, port: Int = 8554): String = "rtsp://$host:$port/live"
+}

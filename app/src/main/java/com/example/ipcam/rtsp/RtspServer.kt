@@ -1,0 +1,86 @@
+package com.example.ipcam.rtsp
+
+import android.util.Log
+import com.example.ipcam.stream.VideoFrameSink
+import java.net.ServerSocket
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
+
+/**
+ * 自研轻量 RTSP 服务端（TCP 监听 + RTP over TCP interleaved）。
+ * 实现 [VideoFrameSink]，接收编码器输出的 H.264 帧并分发给所有 PLAY 中的会话。
+ */
+class RtspServer(private val port: Int) : VideoFrameSink {
+
+    private var serverSocket: ServerSocket? = null
+    private var acceptThread: Thread? = null
+    private val sessions = CopyOnWriteArrayList<RtspSession>()
+    private val packetizer = RtpPacketizer()
+    private val sessionCounter = AtomicInteger(0)
+
+    @Volatile
+    private var sps: ByteArray? = null
+
+    @Volatile
+    private var pps: ByteArray? = null
+
+    @Volatile
+    var running = false
+        private set
+
+    fun start() {
+        serverSocket = ServerSocket(port)
+        running = true
+        acceptThread = Thread({
+            while (running) {
+                try {
+                    val socket = serverSocket?.accept() ?: break
+                    val session = RtspSession(socket, this, "session-${sessionCounter.incrementAndGet()}")
+                    sessions.add(session)
+                    Thread { session.run() }.start()
+                } catch (e: Exception) {
+                    if (!running) break
+                }
+            }
+        }, "RtspAccept")
+        acceptThread?.start()
+        Log.i(TAG, "RTSP server listening on port $port")
+    }
+
+    fun stop() {
+        running = false
+        try {
+            serverSocket?.close()
+        } catch (_: Exception) {
+        }
+        sessions.forEach { it.close() }
+        sessions.clear()
+    }
+
+    fun removeSession(session: RtspSession) {
+        sessions.remove(session)
+    }
+
+    fun buildSdp(): String = SdpBuilder.buildVideo(sps, pps)
+
+    override fun onSpsPps(sps: ByteArray, pps: ByteArray) {
+        this.sps = sps
+        this.pps = pps
+        Log.i(TAG, "onSpsPps sps=${sps.size} pps=${pps.size}")
+    }
+
+    override fun onVideoFrame(data: ByteArray, ptsUs: Long, isKeyFrame: Boolean) {
+        if (sessions.isEmpty()) return
+        val packets = packetizer.packetizeH264(data, ptsUs)
+        if (packets.isEmpty()) return
+        for (session in sessions) {
+            if (session.isPlaying) {
+                for (p in packets) session.sendRtp(p)
+            }
+        }
+    }
+
+    companion object {
+        private const val TAG = "RtspServer"
+    }
+}
