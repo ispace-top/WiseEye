@@ -128,4 +128,8 @@ class StreamingController(private val context: Context) {
     fun switchCamera() {
         cameraManager?.switchCamera()
     }
+
+    fun refreshCamera() {
+        cameraManager?.refresh()
+    }
 }

@@ -5,11 +5,14 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import top.ispace.wiseeye.util.UiUtil
 
 class AboutActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UiUtil.enableImmersive(this)
+        UiUtil.applyOrientation(this)
         setContentView(R.layout.activity_about)
 
         val version = try {

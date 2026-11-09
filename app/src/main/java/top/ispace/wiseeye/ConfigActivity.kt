@@ -9,6 +9,7 @@ import android.widget.Spinner
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import top.ispace.wiseeye.data.ConfigStore
+import top.ispace.wiseeye.util.UiUtil
 import com.google.android.material.button.MaterialButton
 
 class ConfigActivity : AppCompatActivity() {
@@ -30,6 +31,8 @@ class ConfigActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UiUtil.enableImmersive(this)
+        UiUtil.applyOrientation(this)
         setContentView(R.layout.activity_config)
 
         spResolution = findViewById(R.id.spResolution)

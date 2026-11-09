@@ -41,6 +41,7 @@ class StreamService : LifecycleService() {
         when (intent?.action) {
             ACTION_STOP -> stopSelf()
             ACTION_SWITCH_CAMERA -> controller.switchCamera()
+            ACTION_REFRESH_PREVIEW -> controller.refreshCamera()
             ACTION_RESTART -> restartStreaming()
             else -> startStreaming() // ACTION_START 或系统重启（intent == null）
         }
@@ -133,6 +134,7 @@ class StreamService : LifecycleService() {
         const val ACTION_STOP = "top.ispace.wiseeye.action.STOP"
         const val ACTION_SWITCH_CAMERA = "top.ispace.wiseeye.action.SWITCH_CAMERA"
         const val ACTION_RESTART = "top.ispace.wiseeye.action.RESTART"
+        const val ACTION_REFRESH_PREVIEW = "top.ispace.wiseeye.action.REFRESH_PREVIEW"
 
         @Volatile
         var isRunning = false

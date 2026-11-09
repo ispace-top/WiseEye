@@ -4,26 +4,25 @@ import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.view.SurfaceHolder
-import android.view.SurfaceView
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import com.google.android.material.button.MaterialButton
 import top.ispace.wiseeye.data.ConfigStore
-import top.ispace.wiseeye.preview.LocalPreview
+import top.ispace.wiseeye.stream.PreviewViewProvider
 import top.ispace.wiseeye.stream.StreamService
 import top.ispace.wiseeye.util.NetworkUtil
-import com.google.android.material.button.MaterialButton
+import top.ispace.wiseeye.util.UiUtil
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var svPreview: SurfaceView
+    private lateinit var previewView: PreviewView
     private lateinit var tvStatus: TextView
     private lateinit var tvUrl: TextView
     private lateinit var btnToggle: MaterialButton
@@ -32,8 +31,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnSwitchCamera: ImageButton
     private lateinit var btnRotate: ImageButton
 
-    private var preview: LocalPreview? = null
-    private var surfaceReady = false
     private var streaming = false
 
     private val permissionLauncher =
@@ -43,25 +40,13 @@ class MainActivity : AppCompatActivity() {
             if (cam && mic) startStreaming() else tvStatus.text = "需要相机和麦克风权限"
         }
 
-    private val surfaceCallback = object : SurfaceHolder.Callback {
-        override fun surfaceCreated(holder: SurfaceHolder) {
-            surfaceReady = true
-            maybeStartPreview()
-        }
-
-        override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
-
-        override fun surfaceDestroyed(holder: SurfaceHolder) {
-            surfaceReady = false
-            stopPreview()
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UiUtil.enableImmersive(this)
+        UiUtil.applyOrientation(this)
         setContentView(R.layout.activity_main)
 
-        svPreview = findViewById(R.id.svPreview)
+        previewView = findViewById(R.id.previewView)
         tvStatus = findViewById(R.id.tvStatus)
         tvUrl = findViewById(R.id.tvUrl)
         btnToggle = findViewById(R.id.btnToggle)
@@ -70,7 +55,8 @@ class MainActivity : AppCompatActivity() {
         btnSwitchCamera = findViewById(R.id.btnSwitchCamera)
         btnRotate = findViewById(R.id.btnRotate)
 
-        svPreview.holder.addCallback(surfaceCallback)
+        // 将 PreviewView 的 SurfaceProvider 交给服务端 CameraManager，用于本地预览
+        PreviewViewProvider.surfaceProvider = previewView.surfaceProvider
 
         btnToggle.setOnClickListener {
             if (streaming) stopStreaming() else requestPermissionAndStart()
@@ -90,29 +76,24 @@ class MainActivity : AppCompatActivity() {
             val cur = ConfigStore.rotation(this)
             val newRot = if (cur == 90) 0 else 90
             ConfigStore.setRotation(this, newRot)
-            applyOrientation()
+            UiUtil.applyOrientation(this)
             if (streaming) {
                 startService(Intent(this, StreamService::class.java).apply { action = StreamService.ACTION_RESTART })
-                stopPreview()
-                svPreview.postDelayed({ maybeStartPreview() }, 2500)
             }
             Toast.makeText(this, if (newRot == 90) "已切换为竖屏输出" else "已切换为横屏输出", Toast.LENGTH_SHORT).show()
         }
 
-        applyOrientation()
         updateUi()
     }
 
     override fun onResume() {
         super.onResume()
         streaming = StreamService.isRunning
+        if (streaming) {
+            // 重新绑定相机，恢复本地预览
+            startService(Intent(this, StreamService::class.java).apply { action = StreamService.ACTION_REFRESH_PREVIEW })
+        }
         updateUi()
-        maybeStartPreview()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        stopPreview()
     }
 
     private fun requestPermissionAndStart() {
@@ -131,41 +112,13 @@ class MainActivity : AppCompatActivity() {
         ContextCompat.startForegroundService(this, intent)
         streaming = true
         updateUi()
-        maybeStartPreview()
     }
 
     private fun stopStreaming() {
         val intent = Intent(this, StreamService::class.java).apply { action = StreamService.ACTION_STOP }
         startService(intent)
         streaming = false
-        stopPreview()
         updateUi()
-    }
-
-    private fun maybeStartPreview() {
-        if (streaming && surfaceReady) {
-            val port = ConfigStore.rtspPort(this)
-            val u = ConfigStore.username(this)
-            val p = ConfigStore.password(this)
-            val url = "rtsp://127.0.0.1:$port/live"
-            preview?.stop()
-            preview = LocalPreview(svPreview.holder.surface)
-            preview?.start(url, u, p)
-        }
-    }
-
-    private fun stopPreview() {
-        preview?.stop()
-        preview = null
-    }
-
-    private fun applyOrientation() {
-        val rotation = ConfigStore.rotation(this)
-        requestedOrientation = if (rotation == 90) {
-            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        } else {
-            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        }
     }
 
     private fun copyUrl() {

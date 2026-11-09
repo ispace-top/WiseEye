@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.Surface
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
+import androidx.camera.core.UseCase
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
@@ -52,6 +53,11 @@ class CameraManager(private val context: Context) {
 
     fun currentFacing(): Int = facing
 
+    /** 重新绑定（刷新本地预览） */
+    fun refresh() {
+        doBind()
+    }
+
     private fun doBind() {
         val s = surface ?: return
         val lo = lifecycleOwner ?: return
@@ -60,14 +66,23 @@ class CameraManager(private val context: Context) {
             try {
                 val p = future.get()
                 provider = p
-                val pv = Preview.Builder().build()
-                pv.setTargetRotation(rotation)
-                pv.setSurfaceProvider(ContextCompat.getMainExecutor(context)) { request ->
+                // 编码器预览（推流用）
+                val encoderPreview = Preview.Builder().build()
+                encoderPreview.setTargetRotation(rotation)
+                encoderPreview.setSurfaceProvider(ContextCompat.getMainExecutor(context)) { request ->
                     request.provideSurface(s, ContextCompat.getMainExecutor(context)) { }
+                }
+                val useCases = mutableListOf<UseCase>(encoderPreview)
+                // 显示预览（本地预览，若有 PreviewView）
+                PreviewViewProvider.surfaceProvider?.let { sp ->
+                    val displayPreview = Preview.Builder().build()
+                    displayPreview.setTargetRotation(rotation)
+                    displayPreview.setSurfaceProvider(sp)
+                    useCases.add(displayPreview)
                 }
                 val selector = CameraSelector.Builder().requireLensFacing(facing).build()
                 p.unbindAll()
-                val camera = p.bindToLifecycle(lo, selector, pv)
+                val camera = p.bindToLifecycle(lo, selector, *useCases.toTypedArray())
                 zoomController = ZoomControllerFactory.create(camera)
                 zoomController?.let { onZoomReady?.invoke(it) }
             } catch (e: Exception) {
