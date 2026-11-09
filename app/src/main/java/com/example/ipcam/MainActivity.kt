@@ -8,7 +8,6 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.SurfaceHolder
 import android.view.SurfaceView
-import android.widget.CheckBox
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -27,7 +26,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvUrl: TextView
     private lateinit var btnToggle: MaterialButton
     private lateinit var btnSettings: MaterialButton
-    private lateinit var cbAutoStart: CheckBox
 
     private var preview: LocalPreview? = null
     private var surfaceReady = false
@@ -63,12 +61,8 @@ class MainActivity : AppCompatActivity() {
         tvUrl = findViewById(R.id.tvUrl)
         btnToggle = findViewById(R.id.btnToggle)
         btnSettings = findViewById(R.id.btnSettings)
-        cbAutoStart = findViewById(R.id.cbAutoStart)
 
         svPreview.holder.addCallback(surfaceCallback)
-
-        cbAutoStart.isChecked = ConfigStore.isAutoStart(this)
-        cbAutoStart.setOnCheckedChangeListener { _, checked -> ConfigStore.setAutoStart(this, checked) }
 
         btnToggle.setOnClickListener {
             if (streaming) stopStreaming() else requestPermissionAndStart()

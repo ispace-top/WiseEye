@@ -53,30 +53,12 @@
             android:textSize="16sp"
             app:cornerRadius="28dp" />
 
-        <LinearLayout
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSettings"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSettings"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="设置" />
-
-            <CheckBox
-                android:id="@+id/cbAutoStart"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1.4"
-                android:gravity="center"
-                android:text="开机自启"
-                android:textColor="#ECEFF1"
-                android:textSize="14sp" />
-        </LinearLayout>
+            android:text="设置" />
     </LinearLayout>
 </FrameLayout>

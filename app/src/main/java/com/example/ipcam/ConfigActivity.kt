@@ -2,6 +2,7 @@ package com.example.ipcam
 
 import android.os.Bundle
 import android.widget.ArrayAdapter
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Spinner
 import android.widget.Toast
@@ -24,6 +25,7 @@ class ConfigActivity : AppCompatActivity() {
     private lateinit var etUsername: EditText
     private lateinit var etPassword: EditText
     private lateinit var etRtmp: EditText
+    private lateinit var cbAutoStart: CheckBox
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,6 +37,8 @@ class ConfigActivity : AppCompatActivity() {
         etUsername = findViewById(R.id.etUsername)
         etPassword = findViewById(R.id.etPassword)
         etRtmp = findViewById(R.id.etRtmp)
+        cbAutoStart = findViewById(R.id.cbAutoStart)
+        cbAutoStart.isChecked = ConfigStore.isAutoStart(this)
 
         // 分辨率
         spResolution.adapter = ArrayAdapter(
@@ -62,6 +66,7 @@ class ConfigActivity : AppCompatActivity() {
             ConfigStore.setBitrate(this, etBitrate.text.toString().toIntOrNull() ?: 2_000_000)
             ConfigStore.setCredentials(this, etUsername.text.toString().trim(), etPassword.text.toString().trim())
             ConfigStore.setRtmpUrl(this, etRtmp.text.toString().trim())
+            ConfigStore.setAutoStart(this, cbAutoStart.isChecked)
             Toast.makeText(this, "已保存，重新开播后生效", Toast.LENGTH_SHORT).show()
             finish()
         }
