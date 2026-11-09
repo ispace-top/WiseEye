@@ -130,9 +130,11 @@ class LocalPreview(private val surface: Surface) {
                 if (len <= 0 || len > 65535) break
                 val payload = ByteArray(len)
                 if (!readFully(payload)) break
-                if (channel == 0) { // 视频 RTP
-                    val nal = depacketizer.process(payload)
-                    if (nal != null) decoder?.feed(nal)
+                if (channel == 0) { // 视频 RTP，跳过 12 字节 RTP 头再解包
+                    if (payload.size > 12) {
+                        val nal = depacketizer.process(payload.copyOfRange(12, payload.size))
+                        if (nal != null) decoder?.feed(nal)
+                    }
                 }
             }
         }

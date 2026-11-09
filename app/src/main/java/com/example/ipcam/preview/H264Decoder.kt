@@ -14,15 +14,22 @@ class H264Decoder {
     private var codec: MediaCodec? = null
 
     fun start(surface: Surface, sps: ByteArray?, pps: ByteArray?) {
+        Log.i(TAG, "decoder start sps=${sps?.size} pps=${pps?.size}")
         val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, 1280, 720)
-        if (sps != null && pps != null) {
-            format.setByteBuffer("csd-0", ByteBuffer.wrap(sps))
-            format.setByteBuffer("csd-1", ByteBuffer.wrap(pps))
-        }
         val c = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
         c.configure(format, surface, null, 0)
         c.start()
         codec = c
+        // 喂入 SPS/PPS（in-band，兼容性更好，不依赖 CSD）
+        if (sps != null) feed(withStartCode(sps))
+        if (pps != null) feed(withStartCode(pps))
+    }
+
+    private fun withStartCode(nal: ByteArray): ByteArray {
+        val out = ByteArray(4 + nal.size)
+        out[0] = 0; out[1] = 0; out[2] = 0; out[3] = 1
+        System.arraycopy(nal, 0, out, 4, nal.size)
+        return out
     }
 
     fun feed(data: ByteArray) {
@@ -34,7 +41,7 @@ class H264Decoder {
                 if (buf != null && data.size <= buf.remaining()) {
                     buf.clear()
                     buf.put(data)
-                    c.queueInputBuffer(inIdx, 0, data.size, 0, 0)
+                    c.queueInputBuffer(inIdx, 0, data.size, System.nanoTime() / 1000, 0)
                 }
             }
         } catch (e: Exception) {
