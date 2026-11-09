@@ -2,7 +2,10 @@ package com.example.ipcam.stream
 
 import android.content.Context
 import androidx.lifecycle.LifecycleOwner
+import com.example.ipcam.onvif.OnvifServer
+import com.example.ipcam.onvif.WsDiscoveryServer
 import com.example.ipcam.rtsp.RtspServer
+import com.example.ipcam.util.NetworkUtil
 
 /**
  * 流控制中心：编排「相机采集 → 硬编 → RTSP 服务端」全链路。
@@ -14,6 +17,8 @@ class StreamingController(private val context: Context) {
     private var audioRecorder: AudioRecorder? = null
     private var rtspServer: RtspServer? = null
     private var cameraManager: CameraManager? = null
+    private var onvifServer: OnvifServer? = null
+    private var wsDiscovery: WsDiscoveryServer? = null
 
     @Volatile
     var isStreaming = false
@@ -50,6 +55,13 @@ class StreamingController(private val context: Context) {
             cam.bind(surface, lifecycleOwner)
             cameraManager = cam
 
+            val onvif = OnvifServer(rtspPort = port, width = width, height = height, fps = fps)
+            onvif.start()
+            onvifServer = onvif
+            val ws = WsDiscoveryServer { "http://${NetworkUtil.getLocalIpv4Address() ?: "0.0.0.0"}:8000/onvif/device_service" }
+            ws.start()
+            wsDiscovery = ws
+
             isStreaming = true
         } catch (e: Exception) {
             onError?.invoke(e.message ?: "start failed")
@@ -59,11 +71,15 @@ class StreamingController(private val context: Context) {
 
     fun stop() {
         isStreaming = false
+        wsDiscovery?.stop()
+        onvifServer?.stop()
         cameraManager?.unbind()
         audioRecorder?.stop()
         audioEncoder?.stop()
         encoder?.stop()
         rtspServer?.stop()
+        wsDiscovery = null
+        onvifServer = null
         cameraManager = null
         audioRecorder = null
         audioEncoder = null
