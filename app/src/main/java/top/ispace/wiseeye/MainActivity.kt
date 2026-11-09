@@ -89,11 +89,21 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         streaming = StreamService.isRunning
+        PreviewViewProvider.surfaceProvider = previewView.surfaceProvider
         if (streaming) {
             // 重新绑定相机，恢复本地预览
             startService(Intent(this, StreamService::class.java).apply { action = StreamService.ACTION_REFRESH_PREVIEW })
         }
         updateUi()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // 熄屏/后台时移除显示预览，仅保留编码器推流，避免相机帧率下降
+        PreviewViewProvider.surfaceProvider = null
+        if (streaming) {
+            startService(Intent(this, StreamService::class.java).apply { action = StreamService.ACTION_REFRESH_PREVIEW })
+        }
     }
 
     private fun requestPermissionAndStart() {
