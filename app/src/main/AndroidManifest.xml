@@ -40,6 +40,11 @@
             android:exported="false"
             android:label="设置" />
 
+        <activity
+            android:name=".AboutActivity"
+            android:exported="false"
+            android:label="关于" />
+
         <service
             android:name=".stream.StreamService"
             android:exported="false"

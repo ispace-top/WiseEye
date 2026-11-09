@@ -1,5 +1,6 @@
 package com.example.ipcam
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
@@ -69,6 +70,10 @@ class ConfigActivity : AppCompatActivity() {
             ConfigStore.setAutoStart(this, cbAutoStart.isChecked)
             Toast.makeText(this, "已保存，重新开播后生效", Toast.LENGTH_SHORT).show()
             finish()
+        }
+
+        findViewById<MaterialButton>(R.id.btnAbout).setOnClickListener {
+            startActivity(Intent(this, AboutActivity::class.java))
         }
     }
 }

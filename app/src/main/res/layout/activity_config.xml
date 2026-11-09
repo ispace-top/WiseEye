@@ -138,5 +138,13 @@
             android:text="保存"
             android:textSize="16sp"
             app:cornerRadius="28dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAbout"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="关于" />
     </LinearLayout>
 </ScrollView>

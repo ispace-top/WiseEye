@@ -105,7 +105,7 @@ class StreamService : LifecycleService() {
         )
         val text = if (clientCount > 0) "RTSP 服务运行中 · $clientCount 路连接" else "RTSP 服务运行中"
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("IPCam 推流中")
+            .setContentTitle("${getString(R.string.app_name)} 推流中")
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_launcher)
             .setOngoing(true)

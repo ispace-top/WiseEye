@@ -3,13 +3,20 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- 靛蓝背景 -->
     <path
         android:fillColor="#3F51B5"
         android:pathData="M0,0h108v108h-108z" />
+    <!-- 白色杏形眼 -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M38,36h8l4,-6h8l4,6h8c2.2,0 4,1.8 4,4v26c0,2.2 -1.8,4 -4,4h-32c-2.2,0 -4,-1.8 -4,-4v-26c0,-2.2 1.8,-4 4,-4z" />
+        android:pathData="M20,54 C38,32 70,32 88,54 C70,76 38,76 20,54 Z" />
+    <!-- 深靛瞳孔 -->
     <path
-        android:fillColor="#3F51B5"
-        android:pathData="M54,48m-9,0a9,9 0,1 1,18 0a9,9 0,1 1,-18 0" />
+        android:fillColor="#283593"
+        android:pathData="M54,45 m-9,0 a9,9 0 1,1 18,0 a9,9 0 1,1 -18,0" />
+    <!-- 高光 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M58,46.5 m-2.5,0 a2.5,2.5 0 1,1 5,0 a2.5,2.5 0 1,1 -5,0" />
 </vector>
