@@ -1,22 +1,29 @@
 package com.example.ipcam
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.TextView
+import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.example.ipcam.stream.StreamingController
+import com.example.ipcam.data.ConfigStore
+import com.example.ipcam.stream.StreamService
 import com.example.ipcam.util.NetworkUtil
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var controller: StreamingController
     private lateinit var tvStatus: TextView
     private lateinit var tvUrl: TextView
     private lateinit var btnToggle: Button
+    private lateinit var cbAutoStart: CheckBox
+
+    // 乐观 UI 状态：start/stop 时立即更新，onResume 时从服务同步
+    private var streaming = false
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
@@ -32,18 +39,24 @@ class MainActivity : AppCompatActivity() {
         tvStatus = findViewById(R.id.tvStatus)
         tvUrl = findViewById(R.id.tvUrl)
         btnToggle = findViewById(R.id.btnToggle)
-        controller = StreamingController(this)
-        controller.onError = { msg -> runOnUiThread { tvStatus.text = "错误: $msg" } }
+        cbAutoStart = findViewById(R.id.cbAutoStart)
 
-        btnToggle.setOnClickListener {
-            if (controller.isStreaming) {
-                controller.stop()
-                updateUi()
-            } else {
-                requestPermissionAndStart()
-            }
+        cbAutoStart.isChecked = ConfigStore.isAutoStart(this)
+        cbAutoStart.setOnCheckedChangeListener { _, checked ->
+            ConfigStore.setAutoStart(this, checked)
         }
 
+        btnToggle.setOnClickListener {
+            if (streaming) stopStreaming() else requestPermissionAndStart()
+        }
+
+        updateUi()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Log.i(TAG, "onResume isRunning=${StreamService.isRunning}")
+        streaming = StreamService.isRunning // 同步真实服务状态
         updateUi()
     }
 
@@ -59,15 +72,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startStreaming() {
-        controller.start(this)
+        Log.i(TAG, "startStreaming called")
+        val intent = Intent(this, StreamService::class.java).apply { action = StreamService.ACTION_START }
+        ContextCompat.startForegroundService(this, intent)
+        streaming = true
+        updateUi()
+    }
+
+    private fun stopStreaming() {
+        val intent = Intent(this, StreamService::class.java).apply { action = StreamService.ACTION_STOP }
+        startService(intent)
+        streaming = false
         updateUi()
     }
 
     private fun updateUi() {
-        if (controller.isStreaming) {
+        if (streaming) {
             val ip = NetworkUtil.getLocalIpv4Address() ?: "0.0.0.0"
             tvStatus.text = "推流中"
-            tvUrl.text = controller.getRtspUrl(ip)
+            tvUrl.text = "rtsp://$ip:8554/live"
             btnToggle.text = "停止"
         } else {
             tvStatus.text = "已停止"
@@ -76,8 +99,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        controller.stop()
+    companion object {
+        private const val TAG = "MainActivity"
     }
 }
