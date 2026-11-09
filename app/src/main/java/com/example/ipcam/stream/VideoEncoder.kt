@@ -20,6 +20,10 @@ class VideoEncoder {
     private var sink: VideoFrameSink? = null
     private var handlerThread: HandlerThread? = null
 
+    @Volatile
+    var lastFrameTime = 0L
+        private set
+
     fun start(width: Int, height: Int, fps: Int, bitrate: Int, sink: VideoFrameSink): Surface {
         this.sink = sink
         val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height).apply {
@@ -57,6 +61,7 @@ class VideoEncoder {
                             if (sps != null && pps != null) sink?.onSpsPps(sps, pps)
                         } else {
                             val key = info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME != 0
+                            lastFrameTime = System.currentTimeMillis()
                             sink?.onVideoFrame(data, info.presentationTimeUs, key)
                         }
                     }

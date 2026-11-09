@@ -74,7 +74,7 @@ class StreamingController(private val context: Context) {
             cam.bind(surface, lifecycleOwner)
             cameraManager = cam
 
-            val onvif = OnvifServer(rtspPort = port, width = width, height = height, fps = fps)
+            val onvif = OnvifServer(rtspPort = port, width = width, height = height, fps = fps, username = username, password = password)
             onvif.start()
             onvifServer = onvif
             val ws = WsDiscoveryServer { "http://${NetworkUtil.getLocalIpv4Address() ?: "0.0.0.0"}:8000/onvif/device_service" }
@@ -114,4 +114,8 @@ class StreamingController(private val context: Context) {
         val p = ConfigStore.password(context)
         return "rtsp://$u:$p@$host:$port/live"
     }
+
+    fun clientCount(): Int = rtspServer?.clientCount() ?: 0
+
+    fun lastVideoFrameTime(): Long = encoder?.lastFrameTime ?: 0L
 }

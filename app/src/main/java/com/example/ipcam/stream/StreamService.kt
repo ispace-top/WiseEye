@@ -6,7 +6,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
@@ -16,11 +18,13 @@ import com.example.ipcam.keepalive.LockManager
 
 /**
  * 前台服务：承载推流全链路，屏幕关闭/应用退后台时持续运行。
+ * 内置看门狗：检测编码帧心跳，异常时自动重启推流。
  */
 class StreamService : LifecycleService() {
 
     private lateinit var controller: StreamingController
     private lateinit var lockManager: LockManager
+    private val handler = Handler(Looper.getMainLooper())
 
     override fun onCreate() {
         super.onCreate()
@@ -28,7 +32,7 @@ class StreamService : LifecycleService() {
         controller.onError = { msg -> Log.e(TAG, "streaming error: $msg") }
         lockManager = LockManager(this)
         createChannel()
-        startForeground(NOTIFICATION_ID, buildNotification())
+        startForeground(NOTIFICATION_ID, buildNotification(0))
         isRunning = true
     }
 
@@ -45,10 +49,29 @@ class StreamService : LifecycleService() {
         if (controller.isStreaming) return
         lockManager.acquire()
         controller.start(this)
+        handler.removeCallbacks(watchdog)
+        handler.postDelayed(watchdog, WATCHDOG_INTERVAL)
         Log.i(TAG, "streaming started")
     }
 
+    private val watchdog = object : Runnable {
+        override fun run() {
+            if (controller.isStreaming) {
+                val last = controller.lastVideoFrameTime()
+                if (last > 0 && System.currentTimeMillis() - last > WATCHDOG_STALL_MS) {
+                    Log.w(TAG, "看门狗：${WATCHDOG_STALL_MS / 1000}s 无视频帧，重启推流")
+                    controller.stop()
+                    lockManager.acquire()
+                    controller.start(this@StreamService)
+                }
+                updateNotification()
+            }
+            handler.postDelayed(this, WATCHDOG_INTERVAL)
+        }
+    }
+
     override fun onDestroy() {
+        handler.removeCallbacks(watchdog)
         isRunning = false
         controller.stop()
         lockManager.release()
@@ -64,14 +87,26 @@ class StreamService : LifecycleService() {
         }
     }
 
-    private fun buildNotification(): Notification {
-        val stopIntent = Intent(this, StreamService::class.java).apply { action = ACTION_STOP }
-        val stopPi = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE)
-        val contentIntent = Intent(this, MainActivity::class.java)
-        val contentPi = PendingIntent.getActivity(this, 1, contentIntent, PendingIntent.FLAG_IMMUTABLE)
+    private fun updateNotification() {
+        val notif = buildNotification(controller.clientCount())
+        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notif)
+    }
+
+    private fun buildNotification(clientCount: Int): Notification {
+        val stopPi = PendingIntent.getService(
+            this, 0,
+            Intent(this, StreamService::class.java).apply { action = ACTION_STOP },
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        val contentPi = PendingIntent.getActivity(
+            this, 1,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        val text = if (clientCount > 0) "RTSP 服务运行中 · $clientCount 路连接" else "RTSP 服务运行中"
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("IPCam 推流中")
-            .setContentText("RTSP 服务运行中")
+            .setContentText(text)
             .setSmallIcon(R.drawable.ic_launcher)
             .setOngoing(true)
             .setContentIntent(contentPi)
@@ -83,6 +118,8 @@ class StreamService : LifecycleService() {
         private const val TAG = "StreamService"
         private const val CHANNEL_ID = "ipcam_stream"
         private const val NOTIFICATION_ID = 1
+        private const val WATCHDOG_INTERVAL = 10_000L
+        private const val WATCHDOG_STALL_MS = 15_000L
 
         const val ACTION_START = "com.example.ipcam.action.START"
         const val ACTION_STOP = "com.example.ipcam.action.STOP"

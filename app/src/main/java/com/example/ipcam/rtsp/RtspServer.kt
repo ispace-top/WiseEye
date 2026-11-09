@@ -81,6 +81,8 @@ class RtspServer(
 
     fun buildSdp(): String = SdpBuilder.build(sps, pps, aacConfig, sampleRate, channelCount)
 
+    fun clientCount(): Int = sessions.size
+
     fun authChallenge(): String = "Digest realm=\"$realm\", nonce=\"$nonce\""
 
     fun isAuthorized(method: String, uri: String, authHeader: String?): Boolean {
