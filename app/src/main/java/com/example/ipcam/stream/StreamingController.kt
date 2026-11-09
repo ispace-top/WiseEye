@@ -70,16 +70,17 @@ class StreamingController(private val context: Context) {
             recorder.start(audioEnc)
             audioRecorder = recorder
 
-            val cam = CameraManager(context)
-            cam.bind(surface, lifecycleOwner)
-            cameraManager = cam
-
             val onvif = OnvifServer(rtspPort = port, width = width, height = height, fps = fps, username = username, password = password)
             onvif.start()
             onvifServer = onvif
             val ws = WsDiscoveryServer { "http://${NetworkUtil.getLocalIpv4Address() ?: "0.0.0.0"}:8000/onvif/device_service" }
             ws.start()
             wsDiscovery = ws
+
+            val cam = CameraManager(context)
+            cam.onZoomReady = { zc -> onvif.setZoomController(zc) }
+            cam.bind(surface, lifecycleOwner)
+            cameraManager = cam
 
             isStreaming = true
         } catch (e: Exception) {
