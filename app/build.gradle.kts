@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.ipcam"
+    namespace = "top.ispace.wiseeye"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.ipcam"
+        applicationId = "top.ispace.wiseeye"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
