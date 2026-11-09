@@ -38,6 +38,7 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
     implementation("androidx.lifecycle:lifecycle-service:2.8.4")
+    implementation("com.google.android.material:material:1.12.0")
 
     val camerax = "1.3.4"
     implementation("androidx.camera:camera-core:$camerax")

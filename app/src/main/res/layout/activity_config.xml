@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#111111">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -12,7 +14,17 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="分辨率" />
+            android:text="视频参数"
+            android:textColor="#4CAF50"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="分辨率"
+            android:textColor="#ECEFF1" />
         <Spinner
             android:id="@+id/spResolution"
             android:layout_width="match_parent"
@@ -21,8 +33,9 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="帧率 (fps)" />
+            android:layout_marginTop="12dp"
+            android:text="帧率 (fps)"
+            android:textColor="#ECEFF1" />
         <Spinner
             android:id="@+id/spFps"
             android:layout_width="match_parent"
@@ -31,53 +44,81 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="码率 (bps)" />
+            android:layout_marginTop="12dp"
+            android:text="码率 (bps)"
+            android:textColor="#ECEFF1" />
         <EditText
             android:id="@+id/etBitrate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="number" />
+            android:inputType="number"
+            android:textColor="#ECEFF1" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="RTSP 用户名" />
+            android:layout_marginTop="24dp"
+            android:text="认证"
+            android:textColor="#4CAF50"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="RTSP 用户名"
+            android:textColor="#ECEFF1" />
         <EditText
             android:id="@+id/etUsername"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="text" />
+            android:inputType="text"
+            android:textColor="#ECEFF1" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="RTSP 密码" />
+            android:layout_marginTop="12dp"
+            android:text="RTSP 密码"
+            android:textColor="#ECEFF1" />
         <EditText
             android:id="@+id/etPassword"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textPassword" />
+            android:inputType="textPassword"
+            android:textColor="#ECEFF1" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="RTMP 推流地址（可选，跨网推流用）" />
+            android:layout_marginTop="24dp"
+            android:text="推流"
+            android:textColor="#4CAF50"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="RTMP 推流地址（可选，跨网推流用）"
+            android:textColor="#ECEFF1" />
         <EditText
             android:id="@+id/etRtmp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:hint="rtmp://IP:1935/live/channel"
             android:inputType="textUri"
-            android:hint="rtmp://IP:1935/live/channel" />
+            android:textColor="#ECEFF1" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSave"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="56dp"
             android:layout_marginTop="32dp"
-            android:text="保存" />
+            android:text="保存"
+            android:textSize="16sp"
+            app:cornerRadius="28dp" />
     </LinearLayout>
 </ScrollView>
