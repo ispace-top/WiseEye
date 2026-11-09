@@ -75,11 +75,12 @@ class CameraManager(private val context: Context) {
                 val useCases = mutableListOf<UseCase>(encoderPreview)
                 // 显示预览（本地预览，若有 PreviewView）
                 PreviewViewProvider.surfaceProvider?.let { sp ->
+                    Log.i(TAG, "绑定显示预览")
                     val displayPreview = Preview.Builder().build()
                     displayPreview.setTargetRotation(rotation)
                     displayPreview.setSurfaceProvider(sp)
                     useCases.add(displayPreview)
-                }
+                } ?: Log.w(TAG, "显示预览未绑定(surfaceProvider 为 null)")
                 val selector = CameraSelector.Builder().requireLensFacing(facing).build()
                 p.unbindAll()
                 val camera = p.bindToLifecycle(lo, selector, *useCases.toTypedArray())

@@ -3,6 +3,7 @@ package top.ispace.wiseeye.rtsp
 import android.util.Log
 import top.ispace.wiseeye.stream.AudioFrameSink
 import top.ispace.wiseeye.stream.VideoFrameSink
+import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
@@ -47,7 +48,11 @@ class RtspServer(
         private set
 
     fun start() {
-        serverSocket = ServerSocket(port)
+        // SO_REUSEADDR：允许重启后立即重绑端口，避免 EADDRINUSE
+        serverSocket = ServerSocket().apply {
+            reuseAddress = true
+            bind(InetSocketAddress(port))
+        }
         running = true
         acceptThread = Thread({
             while (running) {
